@@ -1,8 +1,12 @@
-#include "Settings.h"
 #include "WebServer.h"
-#include "HTTP.h"
 
-#include <SD.h>
+bool WebServer::checkEvents(char *path, char *queryParameterNames[], char *queryParameterValues[]){
+	for(byte i = 0; i < eventsCount; i++){
+		if(events[i]->triggerEvent(path, queryParameterNames)) return true;
+	}
+	
+	return false;
+}
 
 void WebServer::evaluateRequest(char *requestURI, EthernetClient &client){
 	if(!requestURI || requestURI[0] != '/'){
@@ -27,10 +31,13 @@ void WebServer::evaluateRequest(char *requestURI, EthernetClient &client){
 	char *path = strtok(requestURI, "?");
 	char *query = strtok(NULL, "?");
 	
-	if(!query){
-		#if LOGGING_OUTPUT > 2
-		Serial.println("[WebServer] -> Info: no query was found");
-		#endif
+	char *parameterNames[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
+	char *parameterValues[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
+	
+	if(HTTP::getURIQueryParameters(query, parameterNames, parameterValues)){
+		if(checkEvents(path, parameterNames, parameterValues)){
+			// return;
+		}
 	}
 	
 	openFile(path, client);
@@ -64,6 +71,8 @@ void WebServer::openFile(const char *path, EthernetClient &client){
 
 WebServer::WebServer(){
 	server = new EthernetServer(80);
+	
+	eventsCount = 0;
 }
 
 WebServer::~WebServer(){
@@ -84,6 +93,19 @@ void WebServer::init(byte *mac, IPAddress ip){
 	Ethernet.begin(mac, ip);
 	
 	server->begin();
+}
+
+void WebServer::addURIEvent(URIEvent *event){
+	if(eventsCount < URI_EVENTS_MAX_COUNT){
+		events[eventsCount] = event;
+		eventsCount++;
+		
+		return;
+	}
+	
+	#if LOGGING_OUTPUT > 1
+	Serial.println("[WebServer] -> Warning: too many URI Events have been added");
+	#endif
 }
 
 void WebServer::getMAC(byte *mac){
