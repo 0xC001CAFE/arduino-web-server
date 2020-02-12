@@ -17,7 +17,7 @@ class WebServer{
 		byte eventsCount;
 		URIEvent *events[URI_EVENTS_MAX_COUNT];
 		
-		bool checkEvents(char *path, char *queryParameterNames[], char *queryParameterValues[]);
+		bool checkEvents(EthernetClient &client, char *path, char *queryParameterNames[], char *queryParameterValues[]);
 		
 		void evaluateRequest(char *requestURI, EthernetClient &client);
 		

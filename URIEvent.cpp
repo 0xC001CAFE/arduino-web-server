@@ -1,6 +1,6 @@
 #include "URIEvent.h"
 
-URIEvent::URIEvent(const char *path, const char *queryParameterName, Callback callback){
+URIEvent::URIEvent(const char *path, const char *queryParameterName, URIEventCallback callback){
 	this->path = path;
 	
 	queryParametersCount = 1;
@@ -22,13 +22,13 @@ void URIEvent::addQueryParameter(const char *queryParameterName){
 	#endif
 }
 
-bool URIEvent::triggerEvent(char *currentPath, char *currentQueryParameterNames[]){
+bool URIEvent::triggerEvent(EthernetClient &client, char *currentPath, char *currentQueryParameterNames[], char *currentQueryParameterValues[]){
 	if(!strcmp(path, currentPath)){
 		for(byte i = 0; i < queryParametersCount; i++){
 			if(strcmp(queryParameterNames[i], currentQueryParameterNames[i])) return false;
 		}
 		
-		callback();
+		callback(client, currentPath, currentQueryParameterValues);
 		
 		return true;
 	}

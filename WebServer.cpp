@@ -1,8 +1,8 @@
 #include "WebServer.h"
 
-bool WebServer::checkEvents(char *path, char *queryParameterNames[], char *queryParameterValues[]){
+bool WebServer::checkEvents(EthernetClient &client, char *path, char *queryParameterNames[], char *queryParameterValues[]){
 	for(byte i = 0; i < eventsCount; i++){
-		if(events[i]->triggerEvent(path, queryParameterNames)) return true;
+		if(events[i]->triggerEvent(client, path, queryParameterNames, queryParameterValues)) return true;
 	}
 	
 	return false;
@@ -35,7 +35,7 @@ void WebServer::evaluateRequest(char *requestURI, EthernetClient &client){
 	char *parameterValues[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
 	
 	if(HTTP::getURIQueryParameters(query, parameterNames, parameterValues)){
-		if(checkEvents(path, parameterNames, parameterValues)){
+		if(checkEvents(client, path, parameterNames, parameterValues)){
 			// return;
 		}
 	}
