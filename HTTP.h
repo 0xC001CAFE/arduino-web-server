@@ -15,12 +15,12 @@ class HTTP{
 			GET
 		};
 		
-		static bool getRequest(char *requestBuffer, byte &requestBufferLength, EthernetClient &client, RequestMethod &requestMethod);
+		static bool getRequest(EthernetClient &client, char *requestBuffer, byte &requestBufferLength, RequestMethod &requestMethod);
 		static char* getRequestURI(char *requestBuffer);
 		
 		static bool getURIQueryParameters(char *query, char *parameterNames[], char *parameterValues[]);
 		
-		static void ok(File &file, EthernetClient &client);
+		static void ok(EthernetClient &client, File &file);
 		static void notFound(EthernetClient &client);
 		static void notImplemented(EthernetClient &client);
 };

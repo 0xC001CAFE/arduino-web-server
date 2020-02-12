@@ -1,76 +1,9 @@
 #include "WebServer.h"
 
-bool WebServer::checkEvents(EthernetClient &client, char *path, char *queryParameterNames[], char *queryParameterValues[]){
-	for(byte i = 0; i < eventsCount; i++){
-		if(events[i]->triggerEvent(client, path, queryParameterNames, queryParameterValues)) return true;
-	}
-	
-	return false;
-}
-
-void WebServer::evaluateRequest(char *requestURI, EthernetClient &client){
-	if(!requestURI || requestURI[0] != '/'){
-		#if LOGGING_OUTPUT > 1
-		Serial.println("[WebServer] -> Warning: invalid URI");
-		#endif
-		
-		return;
-	}
-	
-	#if LOGGING_OUTPUT > 2
-	Serial.print("[WebServer] -> Info: URI ");
-	Serial.println(requestURI);
-	#endif
-	
-	if(strlen(requestURI) == 1){
-		openFile("/index.htm", client);
-		
-		return;
-	}
-	
-	char *path = strtok(requestURI, "?");
-	char *query = strtok(NULL, "?");
-	
-	char *parameterNames[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
-	char *parameterValues[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
-	
-	if(HTTP::getURIQueryParameters(query, parameterNames, parameterValues)){
-		if(checkEvents(client, path, parameterNames, parameterValues)){
-			// return;
-		}
-	}
-	
-	openFile(path, client);
-}
-
-void WebServer::openFile(const char *path, EthernetClient &client){
-	if(!SD.exists(path)){
-		#if LOGGING_OUTPUT > 0
-		Serial.print("[WebServer] -> Error: file \"");
-		Serial.print(path);
-		Serial.println("\" does not exist");
-		#endif
-		
-		HTTP::notFound(client);
-		
-		return;
-	}
-	
-	File file = SD.open(path);
-	
-	if(!file){
-		HTTP::notFound(client);
-		
-		return;
-	}
-	
-	HTTP::ok(file, client);
-	
-	file.close();
-}
-
-WebServer::WebServer(){
+WebServer::WebServer(DefaultEvent defaultEvent){
 	server = new EthernetServer(80);
+	
+	this->defaultEvent = defaultEvent;
 	
 	eventsCount = 0;
 }
@@ -148,7 +81,7 @@ void WebServer::run(){
 		#endif
 		
 		while(client.connected()){
-			if(HTTP::getRequest(requestBuffer, requestBufferLength, client, requestMethod)){
+			if(HTTP::getRequest(client, requestBuffer, requestBufferLength, requestMethod)){
 				switch(requestMethod){
 					case HTTP::INVALID:
 						#if LOGGING_OUTPUT > 1
@@ -165,7 +98,7 @@ void WebServer::run(){
 						
 						char *requestURI = HTTP::getRequestURI(requestBuffer);
 						
-						evaluateRequest(requestURI, client);
+						evaluateRequest(client, requestURI);
 						
 						break;
 				}
@@ -188,4 +121,65 @@ void WebServer::run(){
 		Serial.println("[WebServer] -> Info: client disconnected");
 		#endif
 	}
+}
+
+void WebServer::openFile(EthernetClient &client, const char *path){
+	if(!SD.exists(path)){
+		#if LOGGING_OUTPUT > 0
+		Serial.print("[WebServer] -> Error: file \"");
+		Serial.print(path);
+		Serial.println("\" does not exist");
+		#endif
+		
+		HTTP::notFound(client);
+		
+		return;
+	}
+	
+	File file = SD.open(path);
+	
+	if(!file){
+		HTTP::notFound(client);
+		
+		return;
+	}
+	
+	HTTP::ok(client, file);
+	
+	file.close();
+}
+
+bool WebServer::checkEvents(EthernetClient &client, char *path, char *queryParameterNames[], char *queryParameterValues[]){
+	for(byte i = 0; i < eventsCount; i++){
+		if(events[i]->triggerEvent(client, path, queryParameterNames, queryParameterValues)) return true;
+	}
+	
+	return false;
+}
+
+void WebServer::evaluateRequest(EthernetClient &client, char *requestURI){
+	if(!requestURI || requestURI[0] != '/'){
+		#if LOGGING_OUTPUT > 1
+		Serial.println("[WebServer] -> Warning: invalid URI");
+		#endif
+		
+		return;
+	}
+	
+	#if LOGGING_OUTPUT > 2
+	Serial.print("[WebServer] -> Info: URI ");
+	Serial.println(requestURI);
+	#endif
+	
+	char *path = strtok(requestURI, "?");
+	char *query = strtok(NULL, "?");
+	
+	if(strlen(path) == 1) path = "/index.htm";
+	
+	char *parameterNames[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
+	char *parameterValues[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
+	
+	if(HTTP::getURIQueryParameters(query, parameterNames, parameterValues) && checkEvents(client, path, parameterNames, parameterValues)) return;
+	
+	defaultEvent(client, path);
 }

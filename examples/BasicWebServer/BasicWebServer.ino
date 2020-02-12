@@ -14,7 +14,7 @@ int ledState = LOW;
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 0, 150);
 
-WebServer server;
+WebServer server(defaultRequest);
 
 void setup(){
 	#ifdef LED
@@ -51,4 +51,9 @@ void loop(){
 		digitalWrite(LED_PIN, ledState);
 	}
 	#endif
+}
+
+// function to handle valid HTTP requests
+void defaultRequest(EthernetClient &client, char *path){
+	server.openFile(client, path);
 }

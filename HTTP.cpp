@@ -1,6 +1,6 @@
 #include "HTTP.h"
 
-bool HTTP::getRequest(char *requestBuffer, byte &requestBufferLength, EthernetClient &client, RequestMethod &requestMethod){
+bool HTTP::getRequest(EthernetClient &client, char *requestBuffer, byte &requestBufferLength, RequestMethod &requestMethod){
 	if(client.available()){
 		if(requestBufferLength < (REQUEST_BUFFER_SIZE - 1)){
 			requestBuffer[requestBufferLength] = client.read();
@@ -83,7 +83,7 @@ bool HTTP::getURIQueryParameters(char *query, char *parameterNames[], char *para
 	return true;
 }
 
-void HTTP::ok(File &file, EthernetClient &client){
+void HTTP::ok(EthernetClient &client, File &file){
 	client.println("HTTP/1.1 200 OK");
 	client.println("Content-Type: text/html");
 	client.println();
