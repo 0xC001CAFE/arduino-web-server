@@ -14,19 +14,19 @@ class Params{
 		
 		int8_t nameExists(const char *name) const;
 		
-		const char* getName(uint8_t index) const;
+		char* getName(uint8_t index) const;
 		
-		const char* getValueByIndex(uint8_t index) const;
-		const char* getValueByName(const char *name) const;
+		char* getValueByIndex(uint8_t index) const;
+		char* getValueByName(const char *name) const;
 		
-		bool addParam(const char *name, const char *value);
+		bool addParam(char *name, char *value);
 		
 		bool removeParamByIndex(uint8_t index);
 		bool removeParamByName(const char *name);
 	private:
 		struct Param{
-			const char *name;
-			const char *value;
+			char *name;
+			char *value;
 		} *params;
 		
 		uint8_t maxLength;

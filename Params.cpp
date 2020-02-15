@@ -27,19 +27,19 @@ int8_t Params::nameExists(const char *name) const{
 	return -1;
 }
 
-const char* Params::getName(uint8_t index) const{
+char* Params::getName(uint8_t index) const{
 	if(!validIndex(index)) return 0;
 	
 	return params[index].name;
 }
 
-const char* Params::getValueByIndex(uint8_t index) const{
+char* Params::getValueByIndex(uint8_t index) const{
 	if(!validIndex(index)) return 0;
 	
 	return params[index].value;
 }
 
-const char* Params::getValueByName(const char *name) const{
+char* Params::getValueByName(const char *name) const{
 	int8_t index = nameExists(name);
 	
 	if(index <= -1) return 0;
@@ -47,7 +47,7 @@ const char* Params::getValueByName(const char *name) const{
 	return getValueByIndex(index);
 }
 
-bool Params::addParam(const char *name, const char *value){
+bool Params::addParam(char *name, char *value){
 	if(nameExists(name) != -1) return false;
 	
 	if(length >= maxLength) return false;
