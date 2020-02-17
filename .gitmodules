@@ -1,3 +1,0 @@
-[submodule "arduino-log-handler"]
-	path = arduino-log-handler
-	url = https://github.com/0xC001CAFE/arduino-log-handler.git
