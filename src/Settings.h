@@ -5,7 +5,10 @@
 // error = 1
 // error + warning = 2
 // error + warning + info = 3
+// obsolete
 #define LOGGING_OUTPUT 3
+
+#define LOG_HANDLER_LEVEL 3
 
 #define REQUEST_TIMEOUT 1000
 #define REQUEST_BUFFER_SIZE 100
