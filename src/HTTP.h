@@ -2,27 +2,39 @@
 #define HTTP_h
 
 #include "Settings.h"
+#include "StringFunctions.h"
 
+#include <stdint.h>
+#include <string.h>
 #include <Arduino.h>
 #include <SPI.h>
 #include <Ethernet.h>
-#include <SD.h>
 
 class HTTP{
 	public:
-		enum RequestMethod{
-			INVALID,
-			GET
+		enum RequestStatus{
+			BUFFER_OVERFLOW,
+			INVALID_HTTP_VERSION,
+			INVALID_REQUEST_METHOD,
+			GET_REQUEST
 		};
 		
-		static bool getRequest(EthernetClient &client, char *requestBuffer, byte &requestBufferLength, RequestMethod &requestMethod);
-		static char* getRequestURI(char *requestBuffer);
+		enum ContentType{
+			PLAIN,
+			HTML
+		};
 		
-		static bool getURIQueryParameters(char *query, char *parameterNames[], char *parameterValues[]);
+		static bool getRequestLine(EthernetClient &client, char *requestBuffer, uint8_t &requestBufferLength, RequestStatus &status);
 		
-		static void ok(EthernetClient &client, File &file);
-		static void notFound(EthernetClient &client);
-		static void notImplemented(EthernetClient &client);
+		static bool validRequestURL(char *requestLine, char *&requestURL);
+		
+		static bool supportsFileExtension(char *fileExtension, ContentType &type);
+		
+		static void ok(EthernetClient &client, ContentType type);
+	private:
+		static const char *contentTypes[];
+		
+		static const char *fileExtensions[];
 };
 
 #endif

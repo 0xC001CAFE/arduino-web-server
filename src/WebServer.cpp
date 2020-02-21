@@ -1,104 +1,95 @@
 #include "WebServer.h"
 
-WebServer::WebServer(DefaultEvent defaultEvent){
-	server = new EthernetServer(80);
-	
-	this->defaultEvent = defaultEvent;
-	
-	eventsCount = 0;
+WebServer::WebServer(Print &logOutput, RequestEvent defaultRequestEvent): logHandler(logOutput, "WebServer"), server(80){
+	this->defaultRequestEvent = defaultRequestEvent;
 }
 
-WebServer::~WebServer(){
-	delete server;
-}
-
-void WebServer::init(byte *mac, IPAddress ip){
+void WebServer::init(uint8_t *mac, IPAddress ip){
 	pinMode(ETHERNET_SLAVE_SELECT_PIN, OUTPUT);
 	digitalWrite(ETHERNET_SLAVE_SELECT_PIN, HIGH);
 	
 	if(!SD.begin(SD_SLAVE_SELECT_PIN)){
-		#if LOGGING_OUTPUT > 0
-		Serial.println("[WebServer] -> Error: SD card not initialized");
+		#if LOG_HANDLER_LEVEL > 0
+		logHandler.log(LogHandler::ERROR, "SD card could not be initialized");
 		#endif
-	}
-	
-	Ethernet.init(ETHERNET_SLAVE_SELECT_PIN);
-	Ethernet.begin(mac, ip);
-	
-	server->begin();
-}
-
-void WebServer::addURIEvent(URIEvent *event){
-	if(eventsCount < URI_EVENTS_MAX_COUNT){
-		events[eventsCount] = event;
-		eventsCount++;
 		
 		return;
 	}
 	
-	#if LOGGING_OUTPUT > 1
-	Serial.println("[WebServer] -> Warning: too many URI Events have been added");
+	#if LOG_HANDLER_LEVEL > 1
+	if(!SD.exists(ROOT_PATHNAME)){
+		logHandler.log(LogHandler::WARNING, "root pathname \"%s\" does not exist", ROOT_PATHNAME);
+	}
+	#endif
+	
+	Ethernet.init(ETHERNET_SLAVE_SELECT_PIN);
+	Ethernet.begin(mac, ip);
+	
+	server.begin();
+	
+	#if LOG_HANDLER_LEVEL > 2
+	logHandler.log(LogHandler::INFO, "web server is running at \"%u.%u.%u.%u\"", ip[0], ip[1], ip[2], ip[3]);
 	#endif
 }
 
-void WebServer::getMAC(byte *mac){
-	Ethernet.MACAddress(mac);
-}
-
-String WebServer::getMAC(){
-	String mac;
-	byte macBuffer[6];
-	
-	getMAC(macBuffer);
-	
-	for(byte i = 0; i < 6; i++){
-		mac += String(macBuffer[i], HEX);
-		
-		if(i < 5){
-			mac += ":";
-		}
-	}
-	
-	return mac;
-}
-
-IPAddress WebServer::getIP(){
-	return Ethernet.localIP();
-}
-
 void WebServer::run(){
-	EthernetClient client = server->available();
-	
-	if(client){
-		char requestBuffer[REQUEST_BUFFER_SIZE] = "";
-		byte requestBufferLength = 0;
-		HTTP::RequestMethod requestMethod = HTTP::INVALID;
-		
-		unsigned long requestTimeout = millis() + REQUEST_TIMEOUT;
-		
-		#if LOGGING_OUTPUT > 2
-		Serial.println("[WebServer] -> Info: new client");
+	/* if(!server){
+		#if LOG_HANDLER_LEVEL > 0
+		logHandler.log(LogHandler::ERROR, "a problem has occurred");
 		#endif
 		
+		return;
+	} */
+	
+	client = server.available();
+	
+	if(client){
+		#if LOG_HANDLER_LEVEL > 2
+		IPAddress remoteIP = client.remoteIP();
+		
+		logHandler.log(LogHandler::INFO, ">>>>> new client \"%u.%u.%u.%u\" is connected <<<<<", remoteIP[0], remoteIP[1], remoteIP[2], remoteIP[3]);
+		#endif
+		
+		char requestBuffer[REQUEST_BUFFER_SIZE] = { 0 };
+		uint8_t requestBufferLength = 0;
+		
+		HTTP::RequestStatus requestStatus;
+		
+		uint32_t requestTimeout = millis() + REQUEST_TIMEOUT;
+		
 		while(client.connected()){
-			if(HTTP::getRequest(client, requestBuffer, requestBufferLength, requestMethod)){
-				switch(requestMethod){
-					case HTTP::INVALID:
-						#if LOGGING_OUTPUT > 1
-						Serial.println("[WebServer] -> Warning: invalid request method");
+			if(HTTP::getRequestLine(client, requestBuffer, requestBufferLength, requestStatus)){
+				switch(requestStatus){
+					case HTTP::BUFFER_OVERFLOW:
+						#if LOG_HANDLER_LEVEL > 0
+						logHandler.log(LogHandler::ERROR, "request buffer runs out of memory");
 						#endif
 						
-						HTTP::notImplemented(client);
+						// HTTP response
 						
 						break;
-					case HTTP::GET:
-						#if LOGGING_OUTPUT > 2
-						Serial.println("[WebServer] -> Info: GET request method");
+					case HTTP::INVALID_HTTP_VERSION:
+						#if LOG_HANDLER_LEVEL > 1
+						logHandler.log(LogHandler::WARNING, "invalid HTTP version");
 						#endif
 						
-						char *requestURI = HTTP::getRequestURI(requestBuffer);
+						// HTTP response
 						
-						evaluateRequest(client, requestURI);
+						break;
+					case HTTP::INVALID_REQUEST_METHOD:
+						#if LOG_HANDLER_LEVEL > 1
+						logHandler.log(LogHandler::WARNING, "invalid request method");
+						#endif
+						
+						//HTTP::notImplemented(client);
+						
+						break;
+					case HTTP::GET_REQUEST:
+						#if LOG_HANDLER_LEVEL > 2
+						logHandler.log(LogHandler::INFO, "GET request method -> request line: \"%s\"", requestBuffer);
+						#endif
+						
+						evaluateRequestLine(requestBuffer);
 						
 						break;
 				}
@@ -107,79 +98,105 @@ void WebServer::run(){
 			}
 			
 			if(millis() > requestTimeout){
-				#if LOGGING_OUTPUT > 1
-				Serial.println("[WebServer] -> Warning: request timeout");
+				#if LOG_HANDLER_LEVEL > 1
+				logHandler.log(LogHandler::WARNING, "request timeout");
 				#endif
 				
 				break;
 			}
 		}
 		
+		client.flush();
 		client.stop();
 		
-		#if LOGGING_OUTPUT > 2
-		Serial.println("[WebServer] -> Info: client disconnected");
+		#if LOG_HANDLER_LEVEL > 2
+		logHandler.log(LogHandler::INFO, ">>>>> client is disconnected <<<<<");
 		#endif
 	}
 }
 
-void WebServer::openFile(EthernetClient &client, const char *path){
-	if(!SD.exists(path)){
-		#if LOGGING_OUTPUT > 0
-		Serial.print("[WebServer] -> Error: file \"");
-		Serial.print(path);
-		Serial.println("\" does not exist");
+void WebServer::writeFile(const char *pathname){
+	char *defaultPathname = 0;
+	
+	char *fileExtension = strrchr(pathname, '.');
+	
+	if(!fileExtension || (fileExtension && strchr(fileExtension, '/'))){
+		// directory
+		uint8_t pathnameLength = strlen(pathname);
+		
+		if(pathname[pathnameLength - 1] != '/'){
+			// HTTP move permanently
+			
+			return;
+		}
+		
+		defaultPathname = new char[pathnameLength + strlen(DEFAULT_FILENAME) + 1];
+		
+		strcpy(defaultPathname, pathname);
+		strcat(defaultPathname, DEFAULT_FILENAME);
+		
+		fileExtension = strrchr(defaultPathname, '.');
+	}
+	
+	HTTP::ContentType contentType;
+	
+	if(!HTTP::supportsFileExtension(fileExtension, contentType)){
+		#if LOG_HANDLER_LEVEL > 1
+		logHandler.log(LogHandler::WARNING, "file extension \"%s\" is not supported", fileExtension);
 		#endif
 		
-		HTTP::notFound(client);
+		// HTTP response
 		
 		return;
 	}
 	
-	File file = SD.open(path);
+	if(!SD.exists(defaultPathname ? defaultPathname : pathname)){
+		#if LOG_HANDLER_LEVEL > 1
+		logHandler.log(LogHandler::WARNING, "pathname \"%s\" does not exist", defaultPathname ? defaultPathname : pathname);
+		#endif
+		
+		// HTTP response
+		
+		return;
+	}
+	
+	File file = SD.open(defaultPathname ? defaultPathname : pathname, FILE_READ);
 	
 	if(!file){
-		HTTP::notFound(client);
+		// log message
+		
+		// HTTP response
 		
 		return;
 	}
 	
-	HTTP::ok(client, file);
+	HTTP::ok(client, contentType);
+	
+	while(file.available()){
+		client.write(file.read());
+	}
 	
 	file.close();
 }
 
-bool WebServer::checkEvents(EthernetClient &client, char *path, char *queryParameterNames[], char *queryParameterValues[]){
-	for(byte i = 0; i < eventsCount; i++){
-		if(events[i]->triggerEvent(client, path, queryParameterNames, queryParameterValues)) return true;
-	}
+void WebServer::evaluateRequestLine(char *requestLine){
+	char *requestURL;
 	
-	return false;
-}
-
-void WebServer::evaluateRequest(EthernetClient &client, char *requestURI){
-	if(!requestURI || requestURI[0] != '/'){
-		#if LOGGING_OUTPUT > 1
-		Serial.println("[WebServer] -> Warning: invalid URI");
+	if(!HTTP::validRequestURL(requestLine, requestURL)){
+		#if LOG_HANDLER_LEVEL > 1
+		logHandler.log(LogHandler::WARNING, "invalid request URL");
 		#endif
+		
+		// HTTP response
 		
 		return;
 	}
 	
-	#if LOGGING_OUTPUT > 2
-	Serial.print("[WebServer] -> Info: URI ");
-	Serial.println(requestURI);
+	#if LOG_HANDLER_LEVEL > 2
+	logHandler.log(LogHandler::INFO, "valid request URL -> URL: \"%s\"", requestURL);
 	#endif
 	
-	char *path = strtok(requestURI, "?");
-	char *query = strtok(NULL, "?");
+	URL url(logHandler, requestURL);
 	
-	if(strlen(path) == 1) path = "/index.htm";
-	
-	char *parameterNames[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
-	char *parameterValues[URI_QUERY_PARAMETERS_MAX_COUNT] = { NULL };
-	
-	if(HTTP::getURIQueryParameters(query, parameterNames, parameterValues) && checkEvents(client, path, parameterNames, parameterValues)) return;
-	
-	defaultEvent(client, path);
+	defaultRequestEvent(client, url);
 }

@@ -10,6 +10,11 @@
 
 #define LOG_HANDLER_LEVEL 3
 
+// obsolete
+#define ROOT_PATHNAME "/index.htm"
+
+#define DEFAULT_FILENAME "index.htm"
+
 #define REQUEST_TIMEOUT 1000
 #define REQUEST_BUFFER_SIZE 100
 

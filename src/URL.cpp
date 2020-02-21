@@ -41,10 +41,10 @@ void URL::identifyComponents(char *url){
 		char *name = strtok(paramPairs[i], "=");
 		char *value = strtok(0, "=");
 		
-		searchParams.addParam(name, value);
-		
-		#if LOG_HANDLER_LEVEL > 2
-		logHandler.log(LogHandler::INFO, "search parameter \"%s\" was found -> value: \"%s\"", name, value);
-		#endif
+		if(searchParams.addParam(name, value)){
+			#if LOG_HANDLER_LEVEL > 2
+			logHandler.log(LogHandler::INFO, "search parameter \"%s\" was added -> value: \"%s\"", name, value);
+			#endif
+		}
 	}
 }

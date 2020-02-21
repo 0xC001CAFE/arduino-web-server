@@ -11,25 +11,29 @@ unsigned long previousMillis = 0;
 int ledState = LOW;
 #endif
 
+// function prototype
+void defaultRequestEvent(EthernetClient&, URL&);
+
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 0, 150);
 
-WebServer server(defaultRequest);
+WebServer server(Serial, defaultRequestEvent);
+
+// function to handle valid HTTP requests
+void defaultRequestEvent(EthernetClient &client, URL &requestURL){
+	server.writeFile(requestURL.getPathname());
+}
 
 void setup(){
 	#ifdef LED
 	pinMode(LED_PIN, OUTPUT);
 	#endif
 	
-	// initialize web server
 	Serial.begin(9600);
-	server.init(mac, ip);
-	
 	Serial.println("Basic Web Server");
-	Serial.print("IP: ");
-	Serial.println(server.getIP());
-	Serial.print("MAC: ");
-	Serial.println(server.getMAC());
+	
+	// initialize web server
+	server.init(mac, ip);
 }
 
 void loop(){
@@ -51,9 +55,4 @@ void loop(){
 		digitalWrite(LED_PIN, ledState);
 	}
 	#endif
-}
-
-// function to handle valid HTTP requests
-void defaultRequest(EthernetClient &client, char *path){
-	server.openFile(client, path);
 }

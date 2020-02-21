@@ -2,9 +2,13 @@
 #define WebServer_h
 
 #include "Settings.h"
+#include "arduino-log-handler/LogHandler.h"
 #include "HTTP.h"
-#include "URIEvent.h"
+#include "URL.h"
+#include "RequestEvent.h"
 
+#include <stdint.h>
+#include <string.h>
 #include <Arduino.h>
 #include <SPI.h>
 #include <Ethernet.h>
@@ -12,33 +16,22 @@
 
 class WebServer{
 	public:
-		typedef void (*DefaultEvent)(EthernetClient &client, char *path);
+		WebServer(Print &logOutput, RequestEvent defaultRequestEvent);
 		
-		WebServer(DefaultEvent defaultEvent);
-		~WebServer();
-		
-		void init(byte *mac, IPAddress ip);
-		
-		void addURIEvent(URIEvent *event);
-		
-		void getMAC(byte *mac);
-		String getMAC();
-		IPAddress getIP();
+		void init(uint8_t *mac, IPAddress ip);
 		
 		void run();
 		
-		void openFile(EthernetClient &client, const char *path);
+		void writeFile(const char *pathname);
 	private:
-		EthernetServer *server;
+		LogHandler logHandler;
 		
-		DefaultEvent defaultEvent;
+		RequestEvent defaultRequestEvent;
 		
-		byte eventsCount;
-		URIEvent *events[URI_EVENTS_MAX_COUNT];
+		EthernetServer server;
+		EthernetClient client;
 		
-		bool checkEvents(EthernetClient &client, char *path, char *queryParameterNames[], char *queryParameterValues[]);
-		
-		void evaluateRequest(EthernetClient &client, char *requestURI);
+		void evaluateRequestLine(char *requestLine);
 };
 
 #endif
