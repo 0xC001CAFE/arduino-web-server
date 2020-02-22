@@ -27,20 +27,24 @@ void WebServer::init(uint8_t *mac, IPAddress ip){
 	
 	server.begin();
 	
+	if(!server){
+		#if LOG_HANDLER_LEVEL > 0
+		logHandler.log(LogHandler::ERROR, "a problem has occurred during initialization");
+		#endif
+		
+		return;
+	}
+	
 	#if LOG_HANDLER_LEVEL > 2
 	logHandler.log(LogHandler::INFO, "web server is running at \"%u.%u.%u.%u\"", ip[0], ip[1], ip[2], ip[3]);
 	#endif
 }
 
+IPAddress WebServer::getIP() const{
+	return Ethernet.localIP();
+}
+
 void WebServer::run(){
-	/* if(!server){
-		#if LOG_HANDLER_LEVEL > 0
-		logHandler.log(LogHandler::ERROR, "a problem has occurred");
-		#endif
-		
-		return;
-	} */
-	
 	client = server.available();
 	
 	if(client){
@@ -110,7 +114,7 @@ void WebServer::run(){
 		client.stop();
 		
 		#if LOG_HANDLER_LEVEL > 2
-		logHandler.log(LogHandler::INFO, ">>>>> client is disconnected <<<<<");
+		logHandler.log(LogHandler::INFO, "<<<<< client is disconnected >>>>>");
 		#endif
 	}
 }
@@ -125,7 +129,11 @@ void WebServer::writeFile(const char *pathname){
 		uint8_t pathnameLength = strlen(pathname);
 		
 		if(pathname[pathnameLength - 1] != '/'){
-			// HTTP move permanently
+			#if LOG_HANDLER_LEVEL > 2
+			logHandler.log(LogHandler::INFO, "HTTP response: 301 Moved Permanently");
+			#endif
+			
+			HTTP::movedPermanently(client, getIP(), pathname, "/");
 			
 			return;
 		}
@@ -147,6 +155,8 @@ void WebServer::writeFile(const char *pathname){
 		
 		// HTTP response
 		
+		if(defaultPathname) delete[] defaultPathname;
+		
 		return;
 	}
 	
@@ -156,6 +166,8 @@ void WebServer::writeFile(const char *pathname){
 		#endif
 		
 		// HTTP response
+		
+		if(defaultPathname) delete[] defaultPathname;
 		
 		return;
 	}
@@ -167,6 +179,8 @@ void WebServer::writeFile(const char *pathname){
 		
 		// HTTP response
 		
+		if(defaultPathname) delete[] defaultPathname;
+		
 		return;
 	}
 	
@@ -177,6 +191,8 @@ void WebServer::writeFile(const char *pathname){
 	}
 	
 	file.close();
+	
+	if(defaultPathname) delete[] defaultPathname;
 }
 
 void WebServer::evaluateRequestLine(char *requestLine){

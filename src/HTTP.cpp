@@ -17,9 +17,9 @@ bool HTTP::getRequestLine(EthernetClient &client, char *requestBuffer, uint8_t &
 		requestBuffer[requestBufferLength] = client.read();
 		
 		if(requestBufferLength > 0 && requestBuffer[requestBufferLength - 1] == '\r' && requestBuffer[requestBufferLength] == '\n'){
-			requestBuffer[requestBufferLength + 1] = '\0';
+			requestBuffer[requestBufferLength - 1] = '\0';
 			
-			if(!StringFunctions::endsWith(requestBuffer, "HTTP/1.1\r\n")){
+			if(!StringFunctions::endsWith(requestBuffer, "HTTP/1.1")){
 				status = INVALID_HTTP_VERSION;
 			}else if(strncmp(requestBuffer, "GET", 3) == 0){
 				status = GET_REQUEST;
@@ -66,5 +66,13 @@ bool HTTP::supportsFileExtension(char *fileExtension, ContentType &type){
 void HTTP::ok(EthernetClient &client, ContentType type){
 	client.print("HTTP/1.1 200 OK\r\nContent-Type: ");
 	client.print(contentTypes[type]);
+	client.print("\r\n\r\n");
+}
+
+void HTTP::movedPermanently(EthernetClient &client, IPAddress ip, const char *pathname, const char *pathnameSuffix){
+	client.print("HTTP/1.1 301 Moved Permanently\r\nLocation: http://");
+	client.print(ip);
+	client.print(pathname);
+	if(pathnameSuffix) client.print(pathnameSuffix);
 	client.print("\r\n\r\n");
 }

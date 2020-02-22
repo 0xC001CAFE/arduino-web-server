@@ -31,6 +31,7 @@ class HTTP{
 		static bool supportsFileExtension(char *fileExtension, ContentType &type);
 		
 		static void ok(EthernetClient &client, ContentType type);
+		static void movedPermanently(EthernetClient &client, IPAddress ip, const char *pathname, const char *pathnameSuffix = 0);
 	private:
 		static const char *contentTypes[];
 		

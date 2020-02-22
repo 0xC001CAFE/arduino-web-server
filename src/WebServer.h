@@ -20,6 +20,8 @@ class WebServer{
 		
 		void init(uint8_t *mac, IPAddress ip);
 		
+		IPAddress getIP() const;
+		
 		void run();
 		
 		void writeFile(const char *pathname);
