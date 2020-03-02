@@ -2,18 +2,20 @@
 
 const char *HTTP::contentTypes[] = {
 	"text/plain",
-	"text/html"
+	"text/html",
+	"text/css"
 };
 
 const char *HTTP::fileExtensions[] = {
 	".txt",
-	".htm"
+	".htm",
+	".css"
 };
 
 bool HTTP::getRequestLine(EthernetClient &client, char *requestBuffer, uint8_t &requestBufferLength, RequestStatus &status){
 	if(!client.available()) return false;
 	
-	if(requestBufferLength < (REQUEST_BUFFER_SIZE - 1)){
+	if(requestBufferLength < REQUEST_BUFFER_SIZE){
 		requestBuffer[requestBufferLength] = client.read();
 		
 		if(requestBufferLength > 0 && requestBuffer[requestBufferLength - 1] == '\r' && requestBuffer[requestBufferLength] == '\n'){

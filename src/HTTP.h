@@ -21,7 +21,8 @@ class HTTP{
 		
 		enum ContentType{
 			PLAIN,
-			HTML
+			HTML,
+			CSS
 		};
 		
 		static bool getRequestLine(EthernetClient &client, char *requestBuffer, uint8_t &requestBufferLength, RequestStatus &status);
