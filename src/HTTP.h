@@ -30,8 +30,20 @@ class HTTP{
 		
 		static bool supportsFileExtension(char *fileExtension, ContentType &type);
 		
+		// successful 2xx
 		static void ok(EthernetClient &client, ContentType type);
+		// redirection 3xx
 		static void movedPermanently(EthernetClient &client, IPAddress ip, const char *pathname, const char *pathnameSuffix = 0);
+		// client error 4xx
+		static void badRequest(EthernetClient &client);
+		static void notFound(EthernetClient &client);
+		static void requestTimeout(EthernetClient &client);
+		static void requestURITooLong(EthernetClient &client);
+		static void unsupportedMediaType(EthernetClient &client);
+		// server error 5xx
+		static void internalServerError(EthernetClient &client);
+		static void notImplemented(EthernetClient &client);
+		static void httpVersionNotSupported(EthernetClient &client);
 	private:
 		static const char *contentTypes[];
 		

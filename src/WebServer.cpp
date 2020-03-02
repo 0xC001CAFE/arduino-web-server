@@ -17,8 +17,8 @@ void WebServer::init(uint8_t *mac, IPAddress ip){
 	}
 	
 	#if LOG_HANDLER_LEVEL > 1
-	if(!SD.exists(ROOT_PATHNAME)){
-		logHandler.log(LogHandler::WARNING, "root pathname \"%s\" does not exist", ROOT_PATHNAME);
+	if(!SD.exists(DEFAULT_FILENAME)){
+		logHandler.log(LogHandler::WARNING, "default filename \"%s\" does not exist in root directory", DEFAULT_FILENAME);
 	}
 	#endif
 	
@@ -69,7 +69,7 @@ void WebServer::run(){
 						logHandler.log(LogHandler::ERROR, "request buffer runs out of memory");
 						#endif
 						
-						// HTTP response
+						HTTP::requestURITooLong(client);
 						
 						break;
 					case HTTP::INVALID_HTTP_VERSION:
@@ -77,7 +77,7 @@ void WebServer::run(){
 						logHandler.log(LogHandler::WARNING, "invalid HTTP version");
 						#endif
 						
-						// HTTP response
+						HTTP::httpVersionNotSupported(client);
 						
 						break;
 					case HTTP::INVALID_REQUEST_METHOD:
@@ -85,7 +85,7 @@ void WebServer::run(){
 						logHandler.log(LogHandler::WARNING, "invalid request method");
 						#endif
 						
-						//HTTP::notImplemented(client);
+						HTTP::notImplemented(client);
 						
 						break;
 					case HTTP::GET_REQUEST:
@@ -105,6 +105,8 @@ void WebServer::run(){
 				#if LOG_HANDLER_LEVEL > 1
 				logHandler.log(LogHandler::WARNING, "request timeout");
 				#endif
+				
+				HTTP::requestTimeout(client);
 				
 				break;
 			}
@@ -153,7 +155,7 @@ void WebServer::writeFile(const char *pathname){
 		logHandler.log(LogHandler::WARNING, "file extension \"%s\" is not supported", fileExtension);
 		#endif
 		
-		// HTTP response
+		HTTP::unsupportedMediaType(client);
 		
 		if(defaultPathname) delete[] defaultPathname;
 		
@@ -165,7 +167,7 @@ void WebServer::writeFile(const char *pathname){
 		logHandler.log(LogHandler::WARNING, "pathname \"%s\" does not exist", defaultPathname ? defaultPathname : pathname);
 		#endif
 		
-		// HTTP response
+		HTTP::notFound(client);
 		
 		if(defaultPathname) delete[] defaultPathname;
 		
@@ -175,9 +177,11 @@ void WebServer::writeFile(const char *pathname){
 	File file = SD.open(defaultPathname ? defaultPathname : pathname, FILE_READ);
 	
 	if(!file){
-		// log message
+		#if LOG_HANDLER_LEVEL > 0
+		logHandler.log(LogHandler::ERROR, "pathname \"%s\" can not be opened", defaultPathname ? defaultPathname : pathname);
+		#endif
 		
-		// HTTP response
+		HTTP::internalServerError(client);
 		
 		if(defaultPathname) delete[] defaultPathname;
 		
@@ -203,7 +207,7 @@ void WebServer::evaluateRequestLine(char *requestLine){
 		logHandler.log(LogHandler::WARNING, "invalid request URL");
 		#endif
 		
-		// HTTP response
+		HTTP::badRequest(client);
 		
 		return;
 	}

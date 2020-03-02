@@ -76,3 +76,35 @@ void HTTP::movedPermanently(EthernetClient &client, IPAddress ip, const char *pa
 	if(pathnameSuffix) client.print(pathnameSuffix);
 	client.print("\r\n\r\n");
 }
+
+void HTTP::badRequest(EthernetClient &client){
+	client.print("HTTP/1.1 400 Bad Request\r\n\r\n");
+}
+
+void HTTP::notFound(EthernetClient &client){
+	client.print("HTTP/1.1 404 Not Found\r\n\r\n");
+}
+
+void HTTP::requestTimeout(EthernetClient &client){
+	client.print("HTTP/1.1 408 Request Timeout\r\n\r\n");
+}
+
+void HTTP::requestURITooLong(EthernetClient &client){
+	client.print("HTTP/1.1 414 Request-URI Too Long\r\n\r\n");
+}
+
+void HTTP::unsupportedMediaType(EthernetClient &client){
+	client.print("HTTP/1.1 415 Unsupported Media Type\r\n\r\n");
+}
+
+void HTTP::internalServerError(EthernetClient &client){
+	client.print("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+}
+
+void HTTP::notImplemented(EthernetClient &client){
+	client.print("HTTP/1.1 501 Not Implemented\r\n\r\n");
+}
+
+void HTTP::httpVersionNotSupported(EthernetClient &client){
+	client.print("HTTP/1.1 505 HTTP Version Not Supported\r\n\r\n");
+}
