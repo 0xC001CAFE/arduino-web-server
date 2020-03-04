@@ -6,6 +6,7 @@
 #include "HTTP.h"
 #include "URL.h"
 #include "RequestEvent.h"
+#include "URLEvent.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -17,13 +18,17 @@
 class WebServer{
 	public:
 		WebServer(Print &logOutput, RequestEvent defaultRequestEvent);
+		~WebServer();
 		
-		void init(uint8_t *mac, IPAddress ip);
+		bool init(uint8_t *mac, IPAddress ip);
 		
 		IPAddress getIP() const;
 		
+		bool addURLEvent(const char *pathname, char *searchParams, RequestEvent requestEvent);
+		
 		void run();
 		
+		void write(const char *message, HTTP::ContentType contentType);
 		void writeFile(const char *pathname);
 	private:
 		LogHandler logHandler;
@@ -32,6 +37,9 @@ class WebServer{
 		
 		EthernetServer server;
 		EthernetClient client;
+		
+		URLEvent *urlEvents[URL_EVENTS_MAX_COUNT];
+		uint8_t urlEventsLength;
 		
 		void evaluateRequestLine(char *requestLine);
 };

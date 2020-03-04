@@ -14,7 +14,7 @@
 
 class URLEvent{
 	public:
-		URLEvent(LogHandler &logHandler, const char *pathname, const char *searchParam, RequestEvent requestEvent);
+		URLEvent(LogHandler &logHandler, const char *pathname, RequestEvent requestEvent);
 		
 		bool addSearchParam(const char *searchParam);
 		

@@ -1,10 +1,9 @@
 #include "URLEvent.h"
 
-URLEvent::URLEvent(LogHandler &logHandler, const char *pathname, const char *searchParam, RequestEvent requestEvent): logHandler(logHandler){
+URLEvent::URLEvent(LogHandler &logHandler, const char *pathname, RequestEvent requestEvent): logHandler(logHandler){
 	this->pathname = pathname;
 	
-	searchParams[0] = searchParam;
-	searchParamsLength = 1;
+	searchParamsLength = 0;
 	
 	this->requestEvent = requestEvent;
 }

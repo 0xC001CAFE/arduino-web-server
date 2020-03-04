@@ -2,9 +2,17 @@
 
 WebServer::WebServer(Print &logOutput, RequestEvent defaultRequestEvent): logHandler(logOutput, "WebServer"), server(80){
 	this->defaultRequestEvent = defaultRequestEvent;
+	
+	urlEventsLength = 0;
 }
 
-void WebServer::init(uint8_t *mac, IPAddress ip){
+WebServer::~WebServer(){
+	for(uint8_t i = 0; i < urlEventsLength; i++){
+		delete urlEvents[i];
+	}
+}
+
+bool WebServer::init(uint8_t *mac, IPAddress ip){
 	pinMode(ETHERNET_SLAVE_SELECT_PIN, OUTPUT);
 	digitalWrite(ETHERNET_SLAVE_SELECT_PIN, HIGH);
 	
@@ -13,7 +21,7 @@ void WebServer::init(uint8_t *mac, IPAddress ip){
 		logHandler.log(LogHandler::ERROR, "SD card could not be initialized");
 		#endif
 		
-		return;
+		return false;
 	}
 	
 	#if LOG_HANDLER_LEVEL > 1
@@ -32,16 +40,50 @@ void WebServer::init(uint8_t *mac, IPAddress ip){
 		logHandler.log(LogHandler::ERROR, "a problem has occurred during initialization");
 		#endif
 		
-		return;
+		return false;
 	}
 	
 	#if LOG_HANDLER_LEVEL > 2
 	logHandler.log(LogHandler::INFO, "web server is running at \"%u.%u.%u.%u\"", ip[0], ip[1], ip[2], ip[3]);
 	#endif
+	
+	return true;
 }
 
 IPAddress WebServer::getIP() const{
 	return Ethernet.localIP();
+}
+
+bool WebServer::addURLEvent(const char *pathname, char *searchParams, RequestEvent requestEvent){
+	if(urlEventsLength >= URL_EVENTS_MAX_COUNT){
+		#if LOG_HANDLER_LEVEL > 1
+		logHandler.log(LogHandler::WARNING, "too many URL events were added");
+		#endif
+		
+		return false;
+	}
+	
+	if(!pathname || !searchParams){
+		#if LOG_HANDLER_LEVEL > 1
+		logHandler.log(LogHandler::WARNING, "an URL event could not be added due to lack of arguments");
+		#endif
+		
+		return false;
+	}
+	
+	URLEvent *urlEvent = new URLEvent(logHandler, pathname, requestEvent);
+	
+	urlEvents[urlEventsLength] = urlEvent;
+	urlEventsLength++;
+	
+	char *searchParam = strtok(searchParams, ",");
+	while(searchParam){
+		if(!urlEvent->addSearchParam(searchParam)) break;
+		
+		searchParam = strtok(0, ",");
+	}
+	
+	return true;
 }
 
 void WebServer::run(){
@@ -119,6 +161,12 @@ void WebServer::run(){
 		logHandler.log(LogHandler::INFO, "<<<<< client is disconnected >>>>>");
 		#endif
 	}
+}
+
+void WebServer::write(const char *message, HTTP::ContentType contentType){
+	HTTP::ok(client, contentType);
+	
+	client.print(message);
 }
 
 void WebServer::writeFile(const char *pathname){
@@ -217,6 +265,16 @@ void WebServer::evaluateRequestLine(char *requestLine){
 	#endif
 	
 	URL url(logHandler, requestURL);
+	
+	for(uint8_t i = 0; i < urlEventsLength; i++){
+		if(urlEvents[i]->triggerEvent(client, url)){
+			#if LOG_HANDLER_LEVEL > 2
+			logHandler.log(LogHandler::INFO, "an URL event was triggered");
+			#endif
+			
+			return;
+		}
+	}
 	
 	defaultRequestEvent(client, url);
 }
