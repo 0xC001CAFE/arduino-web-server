@@ -1,16 +1,5 @@
 #include <WebServer.h>
 
-// status led
-#define LED
-
-#ifdef LED
-#define LED_PIN 30
-#define LED_INTERVAL 250
-
-unsigned long previousMillis = 0;
-int ledState = LOW;
-#endif
-
 // function prototype
 void defaultRequestEvent(EthernetClient&, URL&);
 
@@ -25,10 +14,6 @@ void defaultRequestEvent(EthernetClient &client, URL &requestURL){
 }
 
 void setup(){
-	#ifdef LED
-	pinMode(LED_PIN, OUTPUT);
-	#endif
-	
 	Serial.begin(9600);
 	Serial.println("Basic Web Server");
 	
@@ -39,20 +24,4 @@ void setup(){
 void loop(){
 	// process HTTP requests
 	server.run();
-	
-	#ifdef LED
-	unsigned long currentMillis = millis();
-	
-	if(currentMillis - previousMillis >= LED_INTERVAL){
-		previousMillis = currentMillis;
-		
-		if(ledState == LOW){
-			ledState = HIGH;
-		}else{
-			ledState = LOW;
-		}
-		
-		digitalWrite(LED_PIN, ledState);
-	}
-	#endif
 }

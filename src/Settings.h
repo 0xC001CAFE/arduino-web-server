@@ -1,6 +1,12 @@
 #ifndef Settings_h
 #define Settings_h
 
+#define STATUS_LED
+#ifdef STATUS_LED
+#define STATUS_LED_PIN 30
+#define STATUS_LED_INTERVAL 250
+#endif
+
 // off = 0
 // error = 1
 // error + warning = 2

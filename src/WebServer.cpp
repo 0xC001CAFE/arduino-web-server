@@ -4,6 +4,12 @@ WebServer::WebServer(Print &logOutput, RequestEvent defaultRequestEvent): logHan
 	this->defaultRequestEvent = defaultRequestEvent;
 	
 	urlEventsLength = 0;
+	
+	#ifdef STATUS_LED
+	ledTime = 0;
+	
+	ledStatus = false;
+	#endif
 }
 
 WebServer::~WebServer(){
@@ -45,6 +51,10 @@ bool WebServer::init(uint8_t *mac, IPAddress ip){
 	
 	#if LOG_HANDLER_LEVEL > 2
 	logHandler.log(LogHandler::INFO, "web server is running at \"%u.%u.%u.%u\"", ip[0], ip[1], ip[2], ip[3]);
+	#endif
+	
+	#ifdef STATUS_LED
+	pinMode(STATUS_LED_PIN, OUTPUT);
 	#endif
 	
 	return true;
@@ -161,6 +171,16 @@ void WebServer::run(){
 		logHandler.log(LogHandler::INFO, "<<<<< client is disconnected >>>>>");
 		#endif
 	}
+	
+	#ifdef STATUS_LED
+	if(millis() > ledTime){
+		digitalWrite(STATUS_LED_PIN, ledStatus ? HIGH : LOW);
+		
+		ledTime = millis() + STATUS_LED_INTERVAL;
+		
+		ledStatus = !ledStatus;
+	}
+	#endif
 }
 
 void WebServer::write(const char *message, HTTP::ContentType contentType){

@@ -41,6 +41,12 @@ class WebServer{
 		URLEvent *urlEvents[URL_EVENTS_MAX_COUNT];
 		uint8_t urlEventsLength;
 		
+		#ifdef STATUS_LED
+		uint32_t ledTime;
+		
+		bool ledStatus;
+		#endif
+		
 		void evaluateRequestLine(char *requestLine);
 };
 
