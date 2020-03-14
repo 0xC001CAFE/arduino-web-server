@@ -3,13 +3,15 @@
 const char *HTTP::contentTypes[] = {
 	"text/plain",
 	"text/html",
-	"text/css"
+	"text/css",
+	"application/javascript"
 };
 
 const char *HTTP::fileExtensions[] = {
 	".txt",
 	".htm",
-	".css"
+	".css",
+	".js"
 };
 
 bool HTTP::getRequestLine(EthernetClient &client, char *requestBuffer, uint8_t &requestBufferLength, RequestStatus &status){
